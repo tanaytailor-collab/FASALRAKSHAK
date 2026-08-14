@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>FasalRakshak — AI Crop Disease Scan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #F9F7F1;
+    --card: #FFFFFF;
+    --ink: #20301F;
+    --ink-soft: #4B5B45;
+    --leaf: #4B7F45;
+    --leaf-dark: #3A6636;
+    --turmeric: #D9A441;
+    --turmeric-dark: #B9862E;
+    --soil: #6B4F3B;
+    --alert: #B23A2E;
+    --alert-bg: #FBEAE7;
+    --ok-bg: #EAF3E7;
+    --line: #E4DFD1;
+    --shadow: 0 8px 24px rgba(32,48,31,0.08);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Work Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    display:flex;
+    justify-content:center;
+    min-height:100vh;
+  }
+  #app{
+    width:100%;
+    max-width:460px;
+    min-height:100vh;
+    background: var(--bg);
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    box-shadow: var(--shadow);
+  }
+  .display{ font-family:'Fraunces', serif; }
+  .mono{ font-family:'IBM Plex Mono', monospace; letter-spacing:0.01em; }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    padding: 22px 20px 14px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background: var(--bg);
+  }
+  .brand-mark{
+    width:34px;height:34px;flex:0 0 auto;
+  }
+  .brand-name{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:20px;
+    color: var(--ink);
+  }
+  .brand-sub{
+    font-size:11px;
+    color: var(--ink-soft);
+    margin-top:-2px;
+  }
+
+  /* ---------- Screens ---------- */
+  .screen{ display:none; flex:1; flex-direction:column; padding: 0 20px 100px; }
+  .screen.active{ display:flex; }
+
+  /* ---------- Onboarding ---------- */
+  #screen-onboarding.active{ padding: 0 24px; justify-content:center; }
+  .onb-hero{ text-align:center; margin-bottom: 28px; }
+  .onb-hero svg{ width:72px; height:72px; margin-bottom:14px; }
+  .onb-title{
+    font-family:'Fraunces', serif;
+    font-weight:700;
+    font-size:30px;
+    line-height:1.15;
+    margin:0 0 8px;
+  }
+  .onb-title em{ color: var(--leaf); font-style:normal; }
+  .onb-tag{ color: var(--ink-soft); font-size:14.5px; line-height:1.5; margin:0; }
+
+  .field{ margin-bottom:16px; }
+  .field label{
+    display:block;
+    font-size:12px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color: var(--soil);
+    margin-bottom:6px;
+  }
+  .field input[type=text], .field select{
+    width:100%;
+    padding:13px 14px;
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    background: var(--card);
+    font-family:'Work Sans', sans-serif;
+    font-size:15px;
+    color: var(--ink);
+  }
+  .field input[type=text]:focus, .field select:focus{
+    outline:none;
+    border-color: var(--leaf);
+  }
+  .lang-toggle{ display:flex; gap:8px; }
+  .lang-btn{
+    flex:1;
+    padding:12px;
+    border-radius:10px;
+    border:1.5px solid var(--line);
+    background: var(--card);
+    font-size:14px;
+    font-weight:600;
+    color: var(--ink-soft);
+    cursor:pointer;
+  }
+  .lang-btn.selected{
+    border-color: var(--leaf);
+    background: var(--ok-bg);
+    color: var(--leaf-dark);
+  }
+
+  .btn-primary{
+    width:100%;
+    padding:15px;
+    border-radius:12px;
+    border:none;
+    background: var(--leaf);
+    color:#fff;
+    font-family:'Work Sans', sans-serif;
+    font-weight:600;
+    font-size:15.5px;
+    cursor:pointer;
+    margin-top:6px;
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+  .btn-primary:hover{ background: var(--leaf-dark); }
+  .btn-primary:active{ transform: scale(0.98); }
+  .btn-primary:disabled{ background:#B9C7B4; cursor:not-allowed; }
+
+  .btn-secondary{
+    width:100%;
+    padding:14px;
+    border-radius:12px;
+    border:1.5px solid var(--line);
+    background: transparent;
+    color: var(--ink);
+    font-family:'Work Sans', sans-serif;
+    font-weight:600;
+    font-size:14.5px;
+    cursor:pointer;
+  }
+
+  /* ---------- Section headers ---------- */
+  .section-eyebrow{
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color: var(--leaf-dark);
+    margin: 22px 0 4px;
+  }
+  .section-title{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:22px;
+    margin: 0 0 16px;
+  }
+
+  /* ---------- Scan zone (signature element) ---------- */
+  .scan-zone{
+    position:relative;
+    width:100%;
+    aspect-ratio: 1/1;
+    max-height:280px;
+    border-radius:20px;
+    background: var(--card);
+    border: 1.5px dashed var(--line);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    overflow:hidden;
+    margin-bottom:16px;
+  }
+  .scan-zone.has-image{ border-style:solid; border-color: var(--leaf); }
+  .scan-zone img{ width:100%; height:100%; object-fit:cover; }
+  .reticle{
+    width:120px; height:120px;
+    position:relative;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .reticle .corner{
+    position:absolute; width:26px; height:26px;
+    border-color: var(--leaf);
+    border-style:solid; border-width:0;
+  }
+  .reticle .c1{ top:0; left:0; border-top-width:3px; border-left-width:3px; border-radius:6px 0 0 0;}
+  .reticle .c2{ top:0; right:0; border-top-width:3px; border-right-width:3px; border-radius:0 6px 0 0;}
+  .reticle .c3{ bottom:0; left:0; border-bottom-width:3px; border-left-width:3px; border-radius:0 0 0 6px;}
+  .reticle .c4{ bottom:0; right:0; border-bottom-width:3px; border-right-width:3px; border-radius:0 0 6px 0;}
+  .reticle svg{ width:46px; height:46px; }
+  .scan-hint{
+    text-align:center;
+    color: var(--ink-soft);
+    font-size:13.5px;
+    margin: 0 0 18px;
+  }
+  .scan-hint strong{ color: var(--ink); }
+  input[type=file]{ display:none; }
+
+  .scan-zone.analyzing .reticle{ animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse{
+    0%,100%{ transform: scale(1); opacity:1; }
+    50%{ transform: scale(1.06); opacity:0.75; }
+  }
+  .scan-ring{
+    position:absolute; inset:0;
+    border-radius:20px;
+    border: 3px solid transparent;
+    border-top-color: var(--leaf);
+    animation: spin 1.1s linear infinite;
+    display:none;
+  }
+  .scan-zone.analyzing .scan-ring{ display:block; }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  .crop-input-row{ margin-bottom: 6px; }
+
+  .status-line{
+    text-align:center;
+    font-size:13px;
+    color: var(--ink-soft);
+    margin: 10px 0 0;
+    min-height:16px;
+  }
+
+  /* ---------- Result card ---------- */
+  .result-card{
+    background: var(--card);
+    border-radius:16px;
+    padding:20px;
+    margin-top:22px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--line);
+  }
+  .result-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:6px; }
+  .result-disease{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:20px;
+    line-height:1.25;
+  }
+  .badge{
+    flex:0 0 auto;
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    padding:5px 10px;
+    border-radius:999px;
+    white-space:nowrap;
+  }
+  .badge-healthy{ background: var(--ok-bg); color: var(--leaf-dark); }
+  .badge-low{ background:#F3EFDD; color:#8A6D1F; }
+  .badge-moderate{ background:#FBEFE2; color:#A65B12; }
+  .badge-high{ background: var(--alert-bg); color: var(--alert); }
+  .confidence{
+    font-size:12px;
+    color: var(--ink-soft);
+    margin: 2px 0 14px;
+  }
+  .confidence .mono{ color: var(--soil); }
+
+  .result-block{ margin-bottom:14px; }
+  .result-block h4{
+    font-size:11.5px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color: var(--soil);
+    margin:0 0 5px;
+  }
+  .result-block p{ margin:0; font-size:14.5px; line-height:1.55; color: var(--ink); }
+  .result-note{
+    background: #F4F0E4;
+    border-radius:10px;
+    padding:12px 14px;
+    font-size:13.5px;
+    color: var(--ink-soft);
+    line-height:1.5;
+  }
+
+  /* ---------- History ---------- */
+  .history-item{
+    background: var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:14px 16px;
+    margin-bottom:10px;
+    cursor:pointer;
+  }
+  .history-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .history-disease{ font-weight:600; font-size:15px; }
+  .history-meta{ font-size:12px; color: var(--ink-soft); margin-top:3px; }
+  .history-detail{ display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--line); }
+  .history-item.expanded .history-detail{ display:block; }
+
+  .empty-state{
+    text-align:center;
+    padding: 60px 20px;
+    color: var(--ink-soft);
+  }
+  .empty-state svg{ width:52px; height:52px; margin-bottom:14px; opacity:0.6; }
+  .empty-state p{ font-size:14px; line-height:1.5; margin:0; }
+
+  /* ---------- Profile ---------- */
+  .profile-card{
+    background: var(--card);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:20px;
+    margin-bottom:18px;
+    text-align:center;
+  }
+  .profile-avatar{
+    width:56px;height:56px;
+    border-radius:50%;
+    background: var(--leaf);
+    color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Fraunces', serif;
+    font-size:22px;
+    font-weight:600;
+    margin:0 auto 12px;
+  }
+  .profile-name{ font-family:'Fraunces', serif; font-weight:600; font-size:19px; }
+  .profile-meta{ font-size:13px; color: var(--ink-soft); margin-top:4px; }
+  .privacy-note{
+    display:flex; gap:10px; align-items:flex-start;
+    background: var(--ok-bg);
+    border-radius:12px;
+    padding:13px 14px;
+    font-size:12.5px;
+    color: var(--leaf-dark);
+    line-height:1.5;
+    margin-bottom:16px;
+  }
+  .privacy-note svg{ width:18px; height:18px; flex:0 0 auto; margin-top:1px; }
+
+  /* ---------- Bottom nav ---------- */
+  .bottom-nav{
+    position:fixed;
+    bottom:0;
+    width:100%;
+    max-width:460px;
+    background: var(--card);
+    border-top:1px solid var(--line);
+    display:none;
+    justify-content:space-around;
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+    z-index:10;
+  }
+  .bottom-nav.active{ display:flex; }
+  .nav-btn{
+    background:none; border:none; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+    color: var(--ink-soft);
+    font-family:'Work Sans', sans-serif;
+    font-size:11px;
+    font-weight:600;
+    padding:6px 14px;
+    border-radius:10px;
+  }
+  .nav-btn svg{ width:22px; height:22px; }
+  .nav-btn.active{ color: var(--leaf-dark); }
+
+  .error-box{
+    background: var(--alert-bg);
+    color: var(--alert);
+    border-radius:12px;
+    padding:14px;
+    font-size:13.5px;
+    line-height:1.5;
+    margin-top:14px;
+  }
+  .error-box button{
+    margin-top:10px;
+    background:none;
+    border:1.5px solid var(--alert);
+    color: var(--alert);
+    padding:8px 14px;
+    border-radius:8px;
+    font-weight:600;
+    font-size:13px;
+    cursor:pointer;
+  }
+
+  .edit-row{ display:flex; gap:10px; }
+  .edit-row .btn-secondary, .edit-row .btn-primary{ margin-top:14px; }
+
+  ::selection{ background: var(--turmeric); color:#fff; }
+  a{ color: var(--leaf-dark); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ ONBOARDING ============ -->
+  <div class="screen active" id="screen-onboarding">
+    <div class="onb-hero">
+      <svg viewBox="0 0 48 48" fill="none">
+        <path d="M24 4C24 4 10 10 10 24C10 33 16 40 24 44C32 40 38 33 38 24C38 10 24 4 24 4Z" fill="#EAF3E7" stroke="#4B7F45" stroke-width="2"/>
+        <path d="M24 14C24 14 30 18 30 25C30 30 27 33 24 34C21 33 18 30 18 25C18 18 24 14 24 14Z" fill="#4B7F45"/>
+      </svg>
+      <h1 class="onb-title">Fasal<em>Rakshak</em></h1>
+      <p class="onb-tag">Photograph a crop leaf. Get an instant AI diagnosis and treatment plan for your region — anywhere in India.</p>
+    </div>
+
+    <div class="field">
+      <label for="onb-name">Your name</label>
+      <input type="text" id="onb-name" placeholder="e.g. Ramesh Kumar">
+    </div>
+    <div class="field">
+      <label for="onb-state">Your state</label>
+      <select id="onb-state">
+        <option value="">Select your state</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Preferred language</label>
+      <div class="lang-toggle">
+        <button type="button" class="lang-btn selected" data-lang="English">English</button>
+        <button type="button" class="lang-btn" data-lang="Hindi">हिन्दी Hindi</button>
+      </div>
+    </div>
+    <button class="btn-primary" id="onb-submit">Start scanning crops</button>
+    <p class="scan-hint" style="margin-top:14px;">Your name and scans are stored only on this device profile — not shared publicly.</p>
+  </div>
+
+  <!-- ============ SCAN TAB ============ -->
+  <div class="screen" id="screen-scan">
+    <div class="topbar">
+      <svg class="brand-mark" viewBox="0 0 48 48" fill="none">
+        <path d="M24 4C24 4 10 10 10 24C10 33 16 40 24 44C32 40 38 33 38 24C38 10 24 4 24 4Z" fill="#EAF3E7" stroke="#4B7F45" stroke-width="2"/>
+        <path d="M24 14C24 14 30 18 30 25C30 30 27 33 24 34C21 33 18 30 18 25C18 18 24 14 24 14Z" fill="#4B7F45"/>
+      </svg>
+      <div>
+        <div class="brand-name">FasalRakshak</div>
+        <div class="brand-sub" id="scan-greeting">Welcome</div>
+      </div>
+    </div>
+
+    <div class="section-eyebrow">New scan</div>
+    <div class="section-title">Diagnose a crop</div>
+
+    <div class="field crop-input-row">
+      <label for="crop-type">Crop (optional)</label>
+      <input type="text" id="crop-type" placeholder="e.g. Wheat, Cotton, Tomato">
+    </div>
+
+    <div class="scan-zone" id="scan-zone">
+      <div class="scan-ring"></div>
+      <div class="reticle" id="reticle-default">
+        <div class="corner c1"></div><div class="corner c2"></div>
+        <div class="corner c3"></div><div class="corner c4"></div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="#4B7F45" stroke-width="1.6">
+          <path d="M4 8a2 2 0 012-2h2l1.5-2h5L16 6h2a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V8z"/>
+          <circle cx="12" cy="13" r="3.4"/>
+        </svg>
+      </div>
+      <img id="preview-img" style="display:none;">
+    </div>
+    <input type="file" id="file-input" accept="image/*" capture="environment">
+    <p class="scan-hint"><strong>Tap the frame</strong> to photograph or upload a clear photo of the affected leaf or plant.</p>
+
+    <button class="btn-primary" id="analyze-btn" disabled>Analyze photo</button>
+    <p class="status-line" id="status-line"></p>
+
+    <div id="result-container"></div>
+  </div>
+
+  <!-- ============ HISTORY TAB ============ -->
+  <div class="screen" id="screen-history">
+    <div class="topbar">
+      <svg class="brand-mark" viewBox="0 0 48 48" fill="none">
+        <path d="M24 4C24 4 10 10 10 24C10 33 16 40 24 44C32 40 38 33 38 24C38 10 24 4 24 4Z" fill="#EAF3E7" stroke="#4B7F45" stroke-width="2"/>
+        <path d="M24 14C24 14 30 18 30 25C30 30 27 33 24 34C21 33 18 30 18 25C18 18 24 14 24 14Z" fill="#4B7F45"/>
+      </svg>
+      <div>
+        <div class="brand-name">FasalRakshak</div>
+        <div class="brand-sub">Your scan history</div>
+      </div>
+    </div>
+    <div class="section-title" style="margin-top:6px;">History</div>
+    <div id="history-list"></div>
+  </div>
+
+  <!-- ============ PROFILE TAB ============ -->
+  <div class="screen" id="screen-profile">
+    <div class="topbar">
+      <svg class="brand-mark" viewBox="0 0 48 48" fill="none">
+        <path d="M24 4C24 4 10 10 10 24C10 33 16 40 24 44C32 40 38 33 38 24C38 10 24 4 24 4Z" fill="#EAF3E7" stroke="#4B7F45" stroke-width="2"/>
+        <path d="M24 14C24 14 30 18 30 25C30 30 27 33 24 34C21 33 18 30 18 25C18 18 24 14 24 14Z" fill="#4B7F45"/>
+      </svg>
+      <div>
+        <div class="brand-name">FasalRakshak</div>
+        <div class="brand-sub">Your profile</div>
+      </div>
+    </div>
+
+    <div class="profile-card">
+      <div class="profile-avatar" id="profile-initial">R</div>
+      <div class="profile-name" id="profile-name">—</div>
+      <div class="profile-meta" id="profile-meta">—</div>
+    </div>
+
+    <div class="privacy-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l7 3v6c0 5-3.4 8.4-7 10-3.6-1.6-7-5-7-10V5l7-3z"/><path d="M9 12l2 2 4-4"/></svg>
+      <span>Your scans and details are stored only on this device profile. Nobody else can see them.</span>
+    </div>
+
+    <div id="profile-view">
+      <button class="btn-secondary" id="edit-profile-btn">Edit profile</button>
+    </div>
+
+    <div id="profile-edit" style="display:none;">
+      <div class="field">
+        <label for="edit-name">Your name</label>
+        <input type="text" id="edit-name">
+      </div>
+      <div class="field">
+        <label for="edit-state">Your state</label>
+        <select id="edit-state"></select>
+      </div>
+      <div class="field">
+        <label>Preferred language</label>
+        <div class="lang-toggle" id="edit-lang-toggle">
+          <button type="button" class="lang-btn" data-lang="English">English</button>
+          <button type="button" class="lang-btn" data-lang="Hindi">हिन्दी Hindi</button>
+        </div>
+      </div>
+      <div class="edit-row">
+        <button class="btn-secondary" id="cancel-edit-btn">Cancel</button>
+        <button class="btn-primary" id="save-edit-btn">Save changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ BOTTOM NAV ============ -->
+  <div class="bottom-nav" id="bottom-nav">
+    <button class="nav-btn active" data-tab="scan">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8a2 2 0 012-2h2l1.5-2h5L16 6h2a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V8z"/><circle cx="12" cy="13" r="3.4"/></svg>
+      Scan
+    </button>
+    <button class="nav-btn" data-tab="history">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+      History
+    </button>
+    <button class="nav-btn" data-tab="profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c1.5-4 5-6 7.5-6s6 2 7.5 6"/></svg>
+      Profile
+    </button>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const INDIAN_STATES = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Delhi","Jammu and Kashmir","Ladakh","Puducherry"];
+
+  const onbStateSel = document.getElementById('onb-state');
+  const editStateSel = document.getElementById('edit-state');
+  INDIAN_STATES.forEach(s=>{
+    onbStateSel.appendChild(new Option(s, s));
+    editStateSel.appendChild(new Option(s, s));
+  });
+
+  let profile = null;
+  let selectedLang = 'English';
+  let editLang = 'English';
+  let currentImage = null; // {base64, mediaType}
+  let history = []; // array of scan objects, newest first
+
+  const $ = id => document.getElementById(id);
+
+  // ---------- storage helpers ----------
+  async function loadProfile(){
+    try{
+      const r = await window.storage.get('profile', false);
+      return r ? JSON.parse(r.value) : null;
+    }catch(e){ return null; }
+  }
+  async function saveProfile(p){
+    try{ await window.storage.set('profile', JSON.stringify(p), false); }catch(e){ console.error('save profile failed', e); }
+  }
+  async function loadHistory(){
+    try{
+      const r = await window.storage.get('history', false);
+      return r ? JSON.parse(r.value) : [];
+    }catch(e){ return []; }
+  }
+  async function saveHistory(h){
+    try{ await window.storage.set('history', JSON.stringify(h), false); }catch(e){ console.error('save history failed', e); }
+  }
+
+  // ---------- onboarding ----------
+  document.querySelectorAll('#screen-onboarding .lang-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('#screen-onboarding .lang-btn').forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedLang = btn.dataset.lang;
+    });
+  });
+
+  $('onb-submit').addEventListener('click', async ()=>{
+    const name = $('onb-name').value.trim();
+    const state = onbStateSel.value;
+    if(!name){ $('onb-name').focus(); return; }
+    if(!state){ onbStateSel.focus(); return; }
+    profile = { name, state, language: selectedLang };
+    await saveProfile(profile);
+    enterApp();
+  });
+
+  // ---------- tab navigation ----------
+  function showTab(tab){
+    ['scan','history','profile'].forEach(t=>{
+      $('screen-'+t).classList.toggle('active', t===tab);
+    });
+    document.querySelectorAll('.nav-btn').forEach(b=>{
+      b.classList.toggle('active', b.dataset.tab===tab);
+    });
+    if(tab==='history') renderHistory();
+    if(tab==='profile') renderProfile();
+  }
+  document.querySelectorAll('.nav-btn').forEach(b=>{
+    b.addEventListener('click', ()=> showTab(b.dataset.tab));
+  });
+
+  async function enterApp(){
+    document.getElementById('screen-onboarding').classList.remove('active');
+    $('bottom-nav').classList.add('active');
+    $('scan-greeting').textContent = 'Namaste, ' + profile.name.split(' ')[0];
+    history = await loadHistory();
+    showTab('scan');
+  }
+
+  // ---------- scan zone ----------
+  const scanZone = $('scan-zone');
+  const fileInput = $('file-input');
+  const previewImg = $('preview-img');
+  const reticleDefault = $('reticle-default');
+  const analyzeBtn = $('analyze-btn');
+  const statusLine = $('status-line');
+
+  scanZone.addEventListener('click', ()=>{
+    if(scanZone.classList.contains('analyzing')) return;
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', ()=>{
+    const file = fileInput.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const dataUrl = reader.result;
+      const base64 = dataUrl.split(',')[1];
+      currentImage = { base64, mediaType: file.type || 'image/jpeg' };
+      previewImg.src = dataUrl;
+      previewImg.style.display = 'block';
+      reticleDefault.style.display = 'none';
+      scanZone.classList.add('has-image');
+      analyzeBtn.disabled = false;
+      $('result-container').innerHTML = '';
+      statusLine.textContent = '';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function severityBadgeClass(sev){
+    const s = (sev||'').toLowerCase();
+    if(s.includes('healthy')) return 'badge-healthy';
+    if(s.includes('high')) return 'badge-high';
+    if(s.includes('moderate')) return 'badge-moderate';
+    return 'badge-low';
+  }
+
+  analyzeBtn.addEventListener('click', analyzePhoto);
+
+  async function analyzePhoto(){
+    if(!currentImage) return;
+    scanZone.classList.add('analyzing');
+    analyzeBtn.disabled = true;
+    statusLine.textContent = 'Analyzing your crop photo…';
+    $('result-container').innerHTML = '';
+
+    const cropType = $('crop-type').value.trim() || 'unspecified crop';
+    const lang = profile.language;
+    const state = profile.state;
+
+    const prompt = `You are an agricultural expert helping a farmer in ${state}, India, diagnose a possible crop disease from a photo. The farmer says the crop is: ${cropType}.
+
+Look carefully at the photo and respond ONLY with a single valid JSON object (no markdown fences, no extra text) with exactly these fields:
+{
+  "disease_name": "name of the disease, or 'Healthy' if no disease is visible",
+  "confidence": a number from 0 to 100,
+  "severity": one of "Healthy", "Low", "Moderate", "High",
+  "symptoms": "1-2 sentences describing the visible symptoms",
+  "organic_treatment": "1-2 sentences on organic/non-chemical remedies suitable for a small Indian farm",
+  "chemical_treatment": "1-2 sentences naming a common, widely available fungicide/pesticide category and general application guidance, or 'Not needed' if healthy",
+  "prevention": "1-2 sentences on preventing recurrence",
+  "regional_note": "1 sentence noting anything relevant to growing this crop in ${state} specifically, such as climate or common regional practice"
+}
+
+Write all text field values in ${lang}. Keep every field concise and in plain, practical language a farmer can act on immediately. Do not include any text outside the JSON object.`;
+
+    try{
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 1000,
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "image", source: { type: "base64", media_type: currentImage.mediaType, data: currentImage.base64 } },
+                { type: "text", text: prompt }
+              ]
+            }
+          ]
+        })
+      });
+
+      if(!response.ok){ throw new Error('API request failed: ' + response.status); }
+      const data = await response.json();
+      const textBlock = (data.content || []).find(c => c.type === 'text');
+      if(!textBlock){ throw new Error('No text in response'); }
+      const cleaned = textBlock.text.replace(/```json|```/g,'').trim();
+      const result = JSON.parse(cleaned);
+
+      renderResult(result);
+
+      const entry = {
+        id: 'scan_' + Date.now(),
+        timestamp: new Date().toISOString(),
+        cropType,
+        state,
+        ...result
+      };
+      history.unshift(entry);
+      await saveHistory(history);
+
+      statusLine.textContent = '';
+    }catch(err){
+      console.error(err);
+      $('result-container').innerHTML = `
+        <div class="error-box">
+          We couldn't analyze this photo. Check your internet connection and try again.
+          <br><button id="retry-btn">Try again</button>
+        </div>`;
+      const retryBtn = document.getElementById('retry-btn');
+      if(retryBtn) retryBtn.addEventListener('click', analyzePhoto);
+      statusLine.textContent = '';
+    }finally{
+      scanZone.classList.remove('analyzing');
+      analyzeBtn.disabled = false;
+    }
+  }
+
+  function renderResult(r){
+    $('result-container').innerHTML = `
+      <div class="result-card">
+        <div class="result-head">
+          <div class="result-disease">${escapeHtml(r.disease_name)}</div>
+          <div class="badge ${severityBadgeClass(r.severity)}">${escapeHtml(r.severity)}</div>
+        </div>
+        <div class="confidence">Confidence: <span class="mono">${escapeHtml(String(r.confidence))}%</span></div>
+        <div class="result-block">
+          <h4>Symptoms</h4>
+          <p>${escapeHtml(r.symptoms)}</p>
+        </div>
+        <div class="result-block">
+          <h4>Organic treatment</h4>
+          <p>${escapeHtml(r.organic_treatment)}</p>
+        </div>
+        <div class="result-block">
+          <h4>Chemical treatment</h4>
+          <p>${escapeHtml(r.chemical_treatment)}</p>
+        </div>
+        <div class="result-block">
+          <h4>Prevention</h4>
+          <p>${escapeHtml(r.prevention)}</p>
+        </div>
+        <div class="result-note">${escapeHtml(r.regional_note)}</div>
+      </div>
+      <button class="btn-secondary" style="margin-top:14px;" id="new-scan-btn">Start a new scan</button>
+    `;
+    document.getElementById('new-scan-btn').addEventListener('click', resetScan);
+  }
+
+  function resetScan(){
+    currentImage = null;
+    previewImg.style.display = 'none';
+    previewImg.src = '';
+    reticleDefault.style.display = 'flex';
+    scanZone.classList.remove('has-image');
+    analyzeBtn.disabled = true;
+    $('crop-type').value = '';
+    $('result-container').innerHTML = '';
+    fileInput.value = '';
+  }
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ---------- history tab ----------
+  function formatDate(iso){
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }) + ' · ' + d.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+  }
+
+  function renderHistory(){
+    const container = $('history-list');
+    if(!history.length){
+      container.innerHTML = `
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+          <p>No scans yet.<br>Your diagnosed crops will appear here.</p>
+        </div>`;
+      return;
+    }
+    container.innerHTML = history.map((h, i) => `
+      <div class="history-item" data-idx="${i}">
+        <div class="history-top">
+          <div>
+            <div class="history-disease">${escapeHtml(h.disease_name)}</div>
+            <div class="history-meta">${escapeHtml(h.cropType)} · ${formatDate(h.timestamp)}</div>
+          </div>
+          <div class="badge ${severityBadgeClass(h.severity)}">${escapeHtml(h.severity)}</div>
+        </div>
+        <div class="history-detail">
+          <div class="result-block"><h4>Symptoms</h4><p>${escapeHtml(h.symptoms)}</p></div>
+          <div class="result-block"><h4>Organic treatment</h4><p>${escapeHtml(h.organic_treatment)}</p></div>
+          <div class="result-block"><h4>Chemical treatment</h4><p>${escapeHtml(h.chemical_treatment)}</p></div>
+          <div class="result-block"><h4>Prevention</h4><p>${escapeHtml(h.prevention)}</p></div>
+          <div class="result-note">${escapeHtml(h.regional_note)}</div>
+        </div>
+      </div>
+    `).join('');
+    container.querySelectorAll('.history-item').forEach(item=>{
+      item.addEventListener('click', ()=> item.classList.toggle('expanded'));
+    });
+  }
+
+  // ---------- profile tab ----------
+  function renderProfile(){
+    $('profile-initial').textContent = profile.name.trim().charAt(0).toUpperCase();
+    $('profile-name').textContent = profile.name;
+    $('profile-meta').textContent = profile.state + ' · ' + profile.language;
+    $('profile-view').style.display = 'block';
+    $('profile-edit').style.display = 'none';
+  }
+
+  $('edit-profile-btn').addEventListener('click', ()=>{
+    $('edit-name').value = profile.name;
+    editStateSel.value = profile.state;
+    editLang = profile.language;
+    document.querySelectorAll('#edit-lang-toggle .lang-btn').forEach(b=>{
+      b.classList.toggle('selected', b.dataset.lang === editLang);
+    });
+    $('profile-view').style.display = 'none';
+    $('profile-edit').style.display = 'block';
+  });
+
+  document.querySelectorAll('#edit-lang-toggle .lang-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('#edit-lang-toggle .lang-btn').forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected');
+      editLang = btn.dataset.lang;
+    });
+  });
+
+  $('cancel-edit-btn').addEventListener('click', renderProfile);
+
+  $('save-edit-btn').addEventListener('click', async ()=>{
+    const name = $('edit-name').value.trim();
+    const state = editStateSel.value;
+    if(!name || !state) return;
+    profile = { name, state, language: editLang };
+    await saveProfile(profile);
+    $('scan-greeting').textContent = 'Namaste, ' + profile.name.split(' ')[0];
+    renderProfile();
+  });
+
+  // ---------- init ----------
+  (async function init(){
+    profile = await loadProfile();
+    if(profile){
+      await enterApp();
+    }
+  })();
+})();
+</script>
+</body>
+</html>
