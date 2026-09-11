@@ -688,8 +688,8 @@
   async function loadLocalModel(){
     if(localModel || modelLoadFailed) return;
     try{
-      localModel = await tf.loadLayersModel('model/model.json');
-      modelClassNames = await fetch('model/class_indices.json').then(r => r.json());
+      localModel = await tf.loadLayersModel('model.json');
+      modelClassNames = await fetch('class_indices.json').then(r => r.json());
     }catch(e){
       console.warn('Local model not available yet, will use AI worker instead.', e);
       modelLoadFailed = true;
