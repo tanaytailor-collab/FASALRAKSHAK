@@ -846,9 +846,9 @@ Write all text field values in ${lang}. Keep every field concise and in plain, p
 
         if(!response.ok){ throw new Error('API request failed: ' + response.status); }
         const data = await response.json();
-        const textBlock = data?.candidates?.[0]?.content?.parts?.find(p => p.text);
+        const textBlock = data?.choices?.[0]?.message?.content;
         if(!textBlock){ throw new Error('No text in response'); }
-        const cleaned = textBlock.text.replace(/```json|```/g,'').trim();
+        const cleaned = textBlock.replace(/```json|```/g,'').trim();
         return JSON.parse(cleaned);
       }catch(err){
         if(attempt < MAX_ATTEMPTS){
