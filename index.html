@@ -657,7 +657,94 @@
     showTab('scan');
   }
 
-  // ---------- scan zone ----------
+  // ---------- Crop disease reference database ----------
+  // Covers major crops grown across India's agro-climatic regions.
+  // AI's job is reduced to identifying which entry matches the photo;
+  // the actual symptoms/treatment/prevention text below is fixed and verified,
+  // not freshly generated per scan.
+  const CROP_DISEASE_DB = {
+    "Rice": [
+      { name: "Rice Blast", regions: "Widespread; especially eastern & northeastern states, hill regions", symptoms: "Spindle-shaped grey-centered lesions with brown margins on leaves; can affect neck and panicle causing empty grains.", organic_treatment: "Use resistant varieties, avoid excess nitrogen, apply neem-based sprays, ensure proper field drainage.", chemical_treatment: "Tricyclazole or Isoprothiolane-based fungicides applied at first sign of lesions, repeated per label interval.", prevention: "Use certified disease-free seed, balanced fertilization, avoid dense planting, rotate with non-host crops." },
+      { name: "Bacterial Leaf Blight", regions: "Widespread, especially irrigated rice belts of Punjab, Haryana, Tamil Nadu", symptoms: "Water-soaked streaks at leaf tips/margins turning yellow to white, leaves wilt in severe cases.", organic_treatment: "Use resistant varieties, avoid clipping seedlings during transplant, apply cow dung/neem cake to soil.", chemical_treatment: "Copper oxychloride or streptocycline sprays at early symptom stage, following recommended dosage.", prevention: "Use certified seed, avoid excess nitrogen, maintain field sanitation, avoid flood irrigation from infected fields." },
+      { name: "Sheath Blight", regions: "Widespread in intensively irrigated rice areas", symptoms: "Oval greenish-grey lesions on leaf sheaths near water line, expanding upward with grayish-white centers.", organic_treatment: "Maintain wider spacing, remove infected stubble, apply Trichoderma-based bio-fungicide.", chemical_treatment: "Hexaconazole or Validamycin-based fungicide sprayed at tillering to booting stage.", prevention: "Avoid excess nitrogen and dense planting, ensure good field drainage, rotate crops." },
+      { name: "Brown Spot", regions: "Widespread, especially nutrient-poor or rainfed soils", symptoms: "Small circular brown spots with yellow halo on leaves and grains, can cause grain discoloration.", organic_treatment: "Improve soil fertility with organic manure, use balanced potassium, treat seeds with hot water before sowing.", chemical_treatment: "Mancozeb or Propiconazole-based fungicide spray at early tillering.", prevention: "Use disease-free seed, avoid nutrient deficiency (especially potassium), maintain proper water management." }
+    ],
+    "Wheat": [
+      { name: "Yellow Rust (Stripe Rust)", regions: "Northern & northwestern plains, hill states with cool winters", symptoms: "Yellow-orange powdery pustules arranged in stripes along leaf veins.", organic_treatment: "Grow resistant varieties, remove volunteer wheat plants that harbor the fungus between seasons.", chemical_treatment: "Propiconazole or Tebuconazole-based fungicide spray at first appearance of pustules.", prevention: "Timely sowing, avoid excess nitrogen, monitor fields regularly during cool humid weather." },
+      { name: "Brown Rust (Leaf Rust)", regions: "Widespread wheat-growing regions, especially central & peninsular India", symptoms: "Small round orange-brown pustules scattered irregularly on leaf surface.", organic_treatment: "Use resistant varieties, ensure balanced nutrition, avoid late sowing.", chemical_treatment: "Propiconazole-based fungicide applied at first sign of pustules.", prevention: "Crop rotation, timely sowing, resistant variety selection." },
+      { name: "Karnal Bunt", regions: "Northern plains, especially Punjab, Haryana, western UP", symptoms: "Partial conversion of grain to black powdery mass with fishy odor, visible at harvest.", organic_treatment: "Use certified disease-free seed, solar heat treatment of seed before sowing.", chemical_treatment: "Seed treatment with Tebuconazole or Carboxin-based fungicide before sowing.", prevention: "Avoid late sowing, use resistant varieties, practice crop rotation." },
+      { name: "Powdery Mildew", regions: "Cooler wheat-growing tracts, hill states", symptoms: "White powdery fungal growth on leaves and stems, reducing photosynthesis.", organic_treatment: "Sulfur dust application, ensure good field airflow with proper spacing.", chemical_treatment: "Propiconazole or sulfur-based fungicide spray at early symptom stage.", prevention: "Avoid dense sowing, balanced fertilization, resistant varieties." }
+    ],
+    "Cotton": [
+      { name: "Cotton Leaf Curl Virus", regions: "Northern cotton belt (Punjab, Haryana, Rajasthan), transmitted by whitefly", symptoms: "Upward/downward curling of leaves, thickened veins, stunted plant growth.", organic_treatment: "Remove and destroy infected plants, use yellow sticky traps for whitefly control, neem oil spray.", chemical_treatment: "Imidacloprid or Thiamethoxam-based insecticide to control whitefly vector.", prevention: "Use resistant/tolerant varieties, timely sowing to avoid peak whitefly season, avoid nearby whitefly host crops." },
+      { name: "Bacterial Blight (Angular Leaf Spot)", regions: "Widespread cotton-growing regions, especially post-rainfall", symptoms: "Angular water-soaked lesions on leaves turning brown/black, can spread to bolls.", organic_treatment: "Use certified disease-free seed, remove and destroy infected plant debris after harvest.", chemical_treatment: "Copper oxychloride spray at first symptom appearance.", prevention: "Crop rotation, avoid overhead irrigation, use resistant varieties." },
+      { name: "Fusarium Wilt", regions: "Widespread, especially in continuously cropped cotton fields", symptoms: "Yellowing and wilting of lower leaves progressing upward, vascular browning inside stem.", organic_treatment: "Crop rotation with non-host crops, soil solarization, Trichoderma-based bio-fungicide in soil.", chemical_treatment: "Carbendazim-based soil drench for young plants at early symptom stage.", prevention: "Use resistant varieties, avoid waterlogging, rotate with cereals or pulses." },
+      { name: "Pink Bollworm damage", regions: "Widespread, notably Maharashtra, Gujarat, Telangana", symptoms: "Rosette flowers, holes in bolls, pink larvae found inside damaged bolls and seeds.", organic_treatment: "Pheromone traps for monitoring/mass trapping, timely destruction of crop residue after harvest.", chemical_treatment: "Recommended insecticide spray (e.g. Profenofos) based on local agricultural extension advice when threshold exceeded.", prevention: "Avoid ratoon cotton, destroy crop residue promptly after harvest, synchronized regional sowing." }
+    ],
+    "Sugarcane": [
+      { name: "Red Rot", regions: "Indo-Gangetic plain, widespread in ratoon crops", symptoms: "Reddening of internal stalk tissue with white patches, foul smell, drying of leaves.", organic_treatment: "Use disease-free healthy sets for planting, avoid ratooning of infected fields, remove and burn infected clumps.", chemical_treatment: "Seed treatment (sett) with Carbendazim-based fungicide before planting.", prevention: "Use resistant varieties, avoid waterlogging, practice field sanitation and crop rotation." },
+      { name: "Smut", regions: "Widespread sugarcane tracts", symptoms: "Long black whip-like structure emerging from the growing point of the cane.", organic_treatment: "Rogue out and destroy whip-bearing canes immediately, use hot water treated setts.", chemical_treatment: "Fungicide (Triadimefon-based) sett treatment before planting.", prevention: "Use resistant varieties, avoid ratooning infected fields, use disease-free planting material." },
+      { name: "Wilt", regions: "Widespread, worsened by drought stress", symptoms: "Yellowing and drying of leaves from top, internal tissue reddish with hollow pith.", organic_treatment: "Ensure good drainage and irrigation scheduling, use disease-free setts.", chemical_treatment: "Sett treatment with Carbendazim before planting.", prevention: "Avoid moisture stress, balanced fertilization, crop rotation." }
+    ],
+    "Tomato": [
+      { name: "Early Blight", regions: "Widespread across India, worse in humid conditions", symptoms: "Concentric dark brown rings ('target spot') on older leaves, leading to yellowing and drop.", organic_treatment: "Neem oil spray, remove infected lower leaves, mulch soil to prevent splash.", chemical_treatment: "Mancozeb or Chlorothalonil-based fungicide spray at first symptom.", prevention: "Crop rotation, avoid overhead watering, adequate plant spacing for airflow." },
+      { name: "Late Blight", regions: "Cooler humid regions, hill states, winter crop in plains", symptoms: "Water-soaked irregular lesions on leaves turning brown/black rapidly, white fungal growth under leaf in humid weather.", organic_treatment: "Remove and destroy infected plants immediately, avoid overhead irrigation, copper-based organic fungicide.", chemical_treatment: "Metalaxyl + Mancozeb combination fungicide spray at first sign, repeat per label.", prevention: "Use resistant varieties, avoid dense planting, monitor closely during cool wet weather." },
+      { name: "Tomato Leaf Curl Virus", regions: "Widespread, transmitted by whitefly", symptoms: "Upward curling and crinkling of leaves, stunted plant growth, reduced fruiting.", organic_treatment: "Remove infected plants, yellow sticky traps for whitefly, neem oil spray to reduce vector population.", chemical_treatment: "Imidacloprid-based insecticide to control whitefly vector.", prevention: "Use virus-resistant/tolerant varieties, insect-proof nursery nets, timely transplanting." },
+      { name: "Fusarium Wilt", regions: "Widespread, especially in warm soils", symptoms: "One-sided yellowing and wilting of leaves progressing upward, brown vascular tissue in stem.", organic_treatment: "Crop rotation, soil solarization, Trichoderma-based bio-fungicide application to soil.", chemical_treatment: "Carbendazim soil drench for young affected plants.", prevention: "Use resistant varieties, avoid continuous tomato cropping in same soil." }
+    ],
+    "Potato": [
+      { name: "Late Blight", regions: "Hill states, winter potato belts of UP, Bihar, West Bengal", symptoms: "Dark water-soaked patches on leaves with white fungal growth underneath in humid weather, rapid spread.", organic_treatment: "Remove and destroy infected plants, avoid overhead irrigation especially in evening.", chemical_treatment: "Metalaxyl + Mancozeb fungicide spray at first appearance, repeated per label schedule.", prevention: "Use certified disease-free seed tubers, resistant varieties, proper field drainage." },
+      { name: "Early Blight", regions: "Widespread potato-growing regions", symptoms: "Dark concentric ring spots on older leaves, leading to leaf drop.", organic_treatment: "Remove infected leaves, ensure balanced fertilization, neem-based spray.", chemical_treatment: "Mancozeb-based fungicide spray at early symptom stage.", prevention: "Crop rotation, adequate plant spacing, avoid nutrient stress." },
+      { name: "Black Scurf", regions: "Widespread, in cooler wet soils", symptoms: "Black hard sclerotia (fungal resting bodies) on tuber surface, stem canker at soil line.", organic_treatment: "Use disease-free certified seed tubers, avoid excess soil moisture at planting.", chemical_treatment: "Seed tuber treatment with Boric acid or fungicide before planting.", prevention: "Crop rotation, proper drainage, use certified seed." }
+    ],
+    "Maize": [
+      { name: "Turcicum Leaf Blight (Northern Corn Leaf Blight)", regions: "Widespread maize belts, especially humid regions", symptoms: "Long elliptical greyish-green to tan lesions on leaves, coalescing in severe infection.", organic_treatment: "Remove and destroy crop residue after harvest, use resistant varieties.", chemical_treatment: "Mancozeb or Propiconazole fungicide spray at first sign of lesions.", prevention: "Crop rotation, resistant hybrids, timely sowing." },
+      { name: "Common Rust", regions: "Widespread, cooler humid conditions", symptoms: "Small reddish-brown powdery pustules scattered on both leaf surfaces.", organic_treatment: "Use resistant hybrids, remove volunteer maize plants between seasons.", chemical_treatment: "Propiconazole-based fungicide spray if severe.", prevention: "Resistant variety selection, timely sowing, field monitoring." },
+      { name: "Maydis Leaf Blight (Southern Corn Leaf Blight)", regions: "Widespread in warm humid conditions", symptoms: "Tan rectangular lesions bound by leaf veins, can affect ear husks.", organic_treatment: "Crop residue destruction, resistant hybrid selection.", chemical_treatment: "Mancozeb-based fungicide spray at early symptom stage.", prevention: "Crop rotation, balanced fertilization, resistant hybrids." }
+    ],
+    "Chickpea": [
+      { name: "Fusarium Wilt", regions: "Widespread chickpea belts of Madhya Pradesh, Rajasthan, Maharashtra", symptoms: "Sudden drooping and drying of entire plant, dark discoloration inside stem near soil line.", organic_treatment: "Crop rotation with cereals, soil solarization before sowing, Trichoderma seed treatment.", chemical_treatment: "Carbendazim-based seed treatment before sowing.", prevention: "Use resistant varieties, avoid waterlogging, timely sowing." },
+      { name: "Ascochyta Blight", regions: "Cooler chickpea-growing tracts, northern India", symptoms: "Dark brown circular lesions with concentric rings on leaves, stems, and pods.", organic_treatment: "Use disease-free seed, remove infected crop debris after harvest.", chemical_treatment: "Chlorothalonil or Mancozeb fungicide spray during cool humid weather.", prevention: "Crop rotation, resistant varieties, avoid dense sowing." }
+    ],
+    "Soybean": [
+      { name: "Yellow Mosaic Virus", regions: "Widespread, especially central India (MP, Maharashtra)", symptoms: "Irregular yellow-green mosaic patches on leaves, stunted growth, reduced pod formation.", organic_treatment: "Remove infected plants early, control whitefly vector with yellow sticky traps and neem oil.", chemical_treatment: "Imidacloprid-based insecticide to manage whitefly vector.", prevention: "Use resistant/tolerant varieties, timely sowing, avoid nearby susceptible host crops." },
+      { name: "Rust", regions: "Widespread in humid growing season", symptoms: "Small reddish-brown pustules mainly on the underside of leaves.", organic_treatment: "Remove volunteer plants between seasons, avoid dense planting for airflow.", chemical_treatment: "Tebuconazole or Propiconazole fungicide spray at first sign.", prevention: "Resistant varieties, timely sowing, field monitoring during humid weather." }
+    ],
+    "Groundnut": [
+      { name: "Tikka Leaf Spot", regions: "Widespread groundnut belts of Gujarat, Andhra Pradesh, Tamil Nadu", symptoms: "Circular dark brown to black spots on leaves with yellow halo, causing defoliation.", organic_treatment: "Remove and destroy crop residue, neem-based spray, balanced fertilization.", chemical_treatment: "Chlorothalonil or Mancozeb fungicide spray at first appearance.", prevention: "Crop rotation, resistant varieties, timely sowing." },
+      { name: "Collar Rot", regions: "Widespread in poorly drained soils", symptoms: "Rotting at soil line/collar region, sudden wilting of seedlings.", organic_treatment: "Use disease-free seed, seed treatment with Trichoderma before sowing.", chemical_treatment: "Carbendazim or Thiram seed treatment before sowing.", prevention: "Avoid waterlogging, use certified seed, proper field drainage." }
+    ],
+    "Mustard": [
+      { name: "White Rust", regions: "Northern mustard belt (Rajasthan, Haryana, UP)", symptoms: "White pustules on underside of leaves, distortion of flowering parts ('staghead').", organic_treatment: "Remove infected plants/stagheads early, avoid excess nitrogen.", chemical_treatment: "Metalaxyl + Mancozeb fungicide spray at first sign.", prevention: "Crop rotation, resistant varieties, timely sowing." },
+      { name: "Downy Mildew", regions: "Northern mustard-growing states, cool humid weather", symptoms: "Yellow patches on upper leaf surface with greyish fungal growth underneath.", organic_treatment: "Improve field drainage, avoid dense sowing for airflow.", chemical_treatment: "Metalaxyl-based fungicide spray at early symptom stage.", prevention: "Resistant varieties, crop rotation, avoid excess moisture." }
+    ],
+    "Banana": [
+      { name: "Panama Wilt (Fusarium Wilt)", regions: "Widespread banana-growing regions, especially Maharashtra, Tamil Nadu", symptoms: "Yellowing of older leaves progressing upward, splitting of pseudostem, internal vascular browning.", organic_treatment: "Use disease-free tissue-culture planting material, avoid replanting banana in infected soil for several years.", chemical_treatment: "Soil drench with Carbendazim around affected plants (limited effectiveness once established).", prevention: "Use resistant varieties, crop rotation, proper field sanitation." },
+      { name: "Sigatoka Leaf Spot", regions: "Widespread humid banana belts", symptoms: "Elongated brown-black streaks on leaves, coalescing and reducing photosynthetic area.", organic_treatment: "Remove and destroy infected leaves regularly, ensure good field spacing for airflow.", chemical_treatment: "Propiconazole or Mancozeb fungicide spray on rotation schedule.", prevention: "Balanced fertilization, proper spacing, resistant varieties where available." }
+    ],
+    "Chilli": [
+      { name: "Anthracnose (Fruit Rot)", regions: "Widespread chilli-growing regions, worse in humid weather", symptoms: "Sunken circular dark lesions on fruit with concentric rings, fruit shrivels and drops.", organic_treatment: "Remove and destroy infected fruits, avoid overhead irrigation, neem oil spray.", chemical_treatment: "Carbendazim or Mancozeb fungicide spray at fruiting stage.", prevention: "Crop rotation, resistant varieties, proper field drainage." },
+      { name: "Leaf Curl Virus", regions: "Widespread, transmitted by mites/whitefly", symptoms: "Upward curling, crinkling and puckering of leaves, stunted plant growth.", organic_treatment: "Remove infected plants, control whitefly/mite vectors with neem oil, yellow sticky traps.", chemical_treatment: "Imidacloprid-based insecticide to control insect vectors.", prevention: "Use tolerant varieties, insect-proof nursery, timely transplanting." }
+    ]
+  };
+
+  function findDiseaseMatch(cropType, diseaseName){
+    if(!diseaseName) return null;
+    const normalizedDisease = diseaseName.toLowerCase().trim();
+    if(normalizedDisease === 'healthy') return null;
+    // Try exact crop match first
+    const cropKey = Object.keys(CROP_DISEASE_DB).find(c => c.toLowerCase() === (cropType||'').toLowerCase().trim());
+    const searchLists = cropKey ? [CROP_DISEASE_DB[cropKey]] : Object.values(CROP_DISEASE_DB);
+    for(const list of searchLists){
+      const match = list.find(d => d.name.toLowerCase() === normalizedDisease
+        || normalizedDisease.includes(d.name.toLowerCase())
+        || d.name.toLowerCase().includes(normalizedDisease));
+      if(match) return match;
+    }
+    return null;
+  }
+
+
   const scanZone = $('scan-zone');
   const fileInput = $('file-input');
   const previewImg = $('preview-img');
@@ -729,10 +816,10 @@
 
 Look carefully at the photo and respond ONLY with a single valid JSON object (no markdown fences, no extra text) with exactly these fields:
 {
-  "disease_name": "name of the disease, or 'Healthy' if no disease is visible",
+  "disease_name": "the specific, commonly-used name of the disease visible (e.g. 'Late Blight', 'Bacterial Leaf Blight'), or 'Healthy' if no disease is visible",
   "confidence": a number from 0 to 100,
   "severity": one of "Healthy", "Low", "Moderate", "High",
-  "symptoms": "1-2 sentences describing the visible symptoms",
+  "symptoms": "1-2 sentences describing the visible symptoms in this specific photo",
   "organic_treatment": "1-2 sentences on organic/non-chemical remedies suitable for a small Indian farm",
   "chemical_treatment": "1-2 sentences naming a common, widely available fungicide/pesticide category and general application guidance, or 'Not needed' if healthy",
   "prevention": "1-2 sentences on preventing recurrence",
@@ -742,24 +829,49 @@ Look carefully at the photo and respond ONLY with a single valid JSON object (no
 Write all text field values in ${lang}. Keep every field concise and in plain, practical language a farmer can act on immediately. Do not include any text outside the JSON object.`;
 
     const WORKER_URL = "https://lively-mud-4ce1.tanay-tailor.workers.dev/";
+    const MAX_ATTEMPTS = 3;
+
+    async function callWorker(attempt){
+      try{
+        if(attempt > 1){ statusLine.textContent = `Still working… (attempt ${attempt} of ${MAX_ATTEMPTS})`; }
+        const response = await fetch(WORKER_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt: prompt,
+            imageBase64: currentImage.base64,
+            mimeType: currentImage.mediaType
+          })
+        });
+
+        if(!response.ok){ throw new Error('API request failed: ' + response.status); }
+        const data = await response.json();
+        const textBlock = data?.candidates?.[0]?.content?.parts?.find(p => p.text);
+        if(!textBlock){ throw new Error('No text in response'); }
+        const cleaned = textBlock.text.replace(/```json|```/g,'').trim();
+        return JSON.parse(cleaned);
+      }catch(err){
+        if(attempt < MAX_ATTEMPTS){
+          await new Promise(r => setTimeout(r, 1500 * attempt)); // brief backoff before retrying
+          return callWorker(attempt + 1);
+        }
+        throw err;
+      }
+    }
 
     try{
-      const response = await fetch(WORKER_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: prompt,
-          imageBase64: currentImage.base64,
-          mimeType: currentImage.mediaType
-        })
-      });
+      const result = await callWorker(1);
 
-      if(!response.ok){ throw new Error('API request failed: ' + response.status); }
-      const data = await response.json();
-      const textBlock = data?.candidates?.[0]?.content?.parts?.find(p => p.text);
-      if(!textBlock){ throw new Error('No text in response'); }
-      const cleaned = textBlock.text.replace(/```json|```/g,'').trim();
-      const result = JSON.parse(cleaned);
+      // If the identified disease matches our verified database, use that
+      // trusted symptoms/treatment/prevention text instead of the AI's own wording.
+      const dbMatch = findDiseaseMatch(cropType, result.disease_name);
+      if(dbMatch){
+        result.symptoms = dbMatch.symptoms;
+        result.organic_treatment = dbMatch.organic_treatment;
+        result.chemical_treatment = dbMatch.chemical_treatment;
+        result.prevention = dbMatch.prevention;
+        result.regional_note = dbMatch.regions ? `Commonly found in: ${dbMatch.regions}.` : result.regional_note;
+      }
 
       renderResult(result);
 
