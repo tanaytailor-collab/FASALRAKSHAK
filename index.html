@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<!-- Free, offline, client-side disease model (no API quota) -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
 <style>
   :root{
     --bg: #F9F7F1;
@@ -657,6 +659,74 @@
     showTab('scan');
   }
 
+  // ---------- Free local model (TensorFlow.js, no API/quota needed) ----------
+  // Model + class_indices.json come from a PlantVillage-trained classifier.
+  // Put model.json + weight shards + class_indices.json in /model in this repo.
+  // Covers only: Tomato, Potato, Maize (Corn), Soybean. Other crops fall back
+  // to the AI worker (if quota available) or the manual reference DB below.
+  let localModel = null;
+  let modelClassNames = null; // array or {index: className} from class_indices.json
+  let modelLoadFailed = false;
+
+  // Map PlantVillage's raw class label -> {crop, disease} as named in CROP_DISEASE_DB
+  // NOTE: verify these keys exactly match the strings in your class_indices.json —
+  // PlantVillage naming can vary slightly between conversions.
+  const MODEL_LABEL_TO_DB = {
+    "Potato___Early_blight":              { crop: "Potato", disease: "Early Blight" },
+    "Potato___Late_blight":                { crop: "Potato", disease: "Late Blight" },
+    "Potato___healthy":                    { crop: "Potato", disease: "Healthy" },
+    "Tomato___Early_blight":               { crop: "Tomato", disease: "Early Blight" },
+    "Tomato___Late_blight":                { crop: "Tomato", disease: "Late Blight" },
+    "Tomato___Tomato_Yellow_Leaf_Curl_Virus": { crop: "Tomato", disease: "Tomato Leaf Curl Virus" },
+    "Tomato___healthy":                    { crop: "Tomato", disease: "Healthy" },
+    "Corn_(maize)___Common_rust_":         { crop: "Maize", disease: "Common Rust" },
+    "Corn_(maize)___Northern_Leaf_Blight":  { crop: "Maize", disease: "Turcicum Leaf Blight (Northern Corn Leaf Blight)" },
+    "Corn_(maize)___healthy":              { crop: "Maize", disease: "Healthy" },
+    "Soybean___healthy":                   { crop: "Soybean", disease: "Healthy" }
+  };
+
+  async function loadLocalModel(){
+    if(localModel || modelLoadFailed) return;
+    try{
+      localModel = await tf.loadLayersModel('model/model.json');
+      modelClassNames = await fetch('model/class_indices.json').then(r => r.json());
+    }catch(e){
+      console.warn('Local model not available yet, will use AI worker instead.', e);
+      modelLoadFailed = true;
+    }
+  }
+
+  // Runs entirely in-browser. imgEl = the <img> showing the user's uploaded photo.
+  async function predictWithLocalModel(imgEl){
+    await loadLocalModel();
+    if(!localModel || !modelClassNames) return null;
+
+    const inputSize = 224; // adjust if your model expects a different size
+    const prediction = tf.tidy(() => {
+      const tensor = tf.browser.fromPixels(imgEl)
+        .resizeBilinear([inputSize, inputSize])
+        .toFloat()
+        .div(255.0)
+        .expandDims();
+      return localModel.predict(tensor);
+    });
+    const scores = await prediction.data();
+    prediction.dispose();
+
+    let bestIdx = 0;
+    for(let i = 1; i < scores.length; i++){ if(scores[i] > scores[bestIdx]) bestIdx = i; }
+    const confidence = Math.round(scores[bestIdx] * 100);
+    const rawLabel = Array.isArray(modelClassNames) ? modelClassNames[bestIdx] : modelClassNames[bestIdx] ?? modelClassNames[String(bestIdx)];
+
+    const mapped = MODEL_LABEL_TO_DB[rawLabel];
+    if(!mapped) return { rawLabel, confidence, mapped: null };
+    return { rawLabel, confidence, mapped, confidencePct: confidence };
+  }
+
+  // Kick off model loading in the background as soon as the page opens,
+  // so it's ready by the time the user analyzes a photo.
+  loadLocalModel();
+
   // ---------- Crop disease reference database ----------
   // Covers major crops grown across India's agro-climatic regions.
   // AI's job is reduced to identifying which entry matches the photo;
@@ -811,6 +881,51 @@
     const cropType = $('crop-type').value.trim() || 'unspecified crop';
     const lang = profile.language;
     const state = profile.state;
+
+    // ---- Try the free, on-device model first (no quota, no cost, works offline) ----
+    const CONFIDENCE_THRESHOLD = 55; // below this, don't trust the local model's guess
+    try{
+      const local = await predictWithLocalModel(previewImg);
+      if(local && local.mapped && local.confidence >= CONFIDENCE_THRESHOLD){
+        const { crop, disease } = local.mapped;
+        if(disease === 'Healthy'){
+          const healthyResult = {
+            disease_name: 'Healthy', confidence: local.confidence, severity: 'Healthy',
+            symptoms: 'No visible signs of disease detected on this leaf.',
+            organic_treatment: 'Not needed.', chemical_treatment: 'Not needed.',
+            prevention: 'Continue regular monitoring and good field hygiene.',
+            regional_note: `Detected on-device (offline model) for ${crop}.`
+          };
+          renderResult(healthyResult);
+          history.unshift({ id: 'scan_' + Date.now(), timestamp: new Date().toISOString(), cropType: crop, state, ...healthyResult });
+          await saveHistory(history);
+          statusLine.textContent = '';
+          scanZone.classList.remove('analyzing');
+          analyzeBtn.disabled = false;
+          return;
+        }
+        const dbMatch = findDiseaseMatch(crop, disease);
+        if(dbMatch){
+          const result = {
+            disease_name: dbMatch.name, confidence: local.confidence, severity: 'Moderate',
+            symptoms: dbMatch.symptoms, organic_treatment: dbMatch.organic_treatment,
+            chemical_treatment: dbMatch.chemical_treatment, prevention: dbMatch.prevention,
+            regional_note: `Commonly found in: ${dbMatch.regions}. (Detected on-device, offline — no internet needed.)`
+          };
+          renderResult(result);
+          history.unshift({ id: 'scan_' + Date.now(), timestamp: new Date().toISOString(), cropType: crop, state, ...result });
+          await saveHistory(history);
+          statusLine.textContent = '';
+          scanZone.classList.remove('analyzing');
+          analyzeBtn.disabled = false;
+          return;
+        }
+      }
+      // Local model wasn't confident, didn't cover this crop, or isn't loaded yet —
+      // fall through to the AI worker / manual reference DB below.
+    }catch(e){
+      console.warn('Local model prediction failed, falling back to AI worker.', e);
+    }
 
     const prompt = `You are an agricultural expert helping a farmer in ${state}, India, diagnose a possible crop disease from a photo. The farmer says the crop is: ${cropType}.
 
